@@ -24,7 +24,17 @@
                 <p class="text-sm text-gray-500 mt-1">Login untuk melanjutkan</p>
             </div>
 
-            <form id="loginForm" class="space-y-5">
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Pengguna</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <i class="fa-solid fa-id-card"></i>
+                        </span>
+                        <input type="text" id="loginNama" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Masukkan nama Anda" required>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
                     <div class="relative">
@@ -50,7 +60,7 @@
                     <span>Username atau password salah!</span>
                 </div>
 
-                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-lg shadow-md transition duration-200">
+                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-lg shadow-md transition duration-200 mt-2">
                     LOGIN
                 </button>
             </form>
@@ -76,7 +86,7 @@
                     <i class="fa-solid fa-user-gear"></i>
                 </div>
                 <div class="overflow-hidden">
-                    <h4 id="userDisplayName" class="font-semibold text-sm text-white truncate">User</h4>
+                    <h4 id="userDisplayName" class="font-semibold text-sm text-white truncate">Nama Pengguna</h4>
                     <span id="userRoleBadge" class="inline-block text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 font-medium capitalize">Role</span>
                 </div>
             </div>
@@ -446,13 +456,14 @@
 
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            const nama = document.getElementById('loginNama').value.trim();
             const u = document.getElementById('loginUsername').value.trim();
             const p = document.getElementById('loginPassword').value.trim();
 
             if (u === 'admin' && p === 'admin') {
-                currentUser = { name: 'Mochamad Rizky Ramadhan', role: 'admin' };
+                currentUser = { name: nama || 'Administrator', role: 'admin' };
             } else if (u === 'karyawan' && p === 'karyawan123') {
-                currentUser = { name: 'Kasir Kantin', role: 'kasir' };
+                currentUser = { name: nama || 'Kasir Kantin', role: 'kasir' };
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
                 return;
@@ -483,6 +494,7 @@
             currentUser = null;
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('loginNama').value = '';
             document.getElementById('loginUsername').value = '';
             document.getElementById('loginPassword').value = '';
         }
