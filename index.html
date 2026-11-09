@@ -116,7 +116,11 @@
                     <i class="fa-solid fa-users-gear w-5"></i>
                     <span>Manajemen User</span>
                 </button>
-                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600/20 text-red-400 transition text-left mt-6">
+                <button onclick="resetSystemData()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-yellow-600/20 text-yellow-500 transition text-left admin-only mt-4">
+                    <i class="fa-solid fa-rotate-left w-5"></i>
+                    <span>Reset Data Default</span>
+                </button>
+                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600/20 text-red-400 transition text-left mt-2">
                     <i class="fa-solid fa-right-from-bracket w-5"></i>
                     <span>Logout</span>
                 </button>
@@ -487,21 +491,17 @@
         </div>
     </div>
 
-    <!-- SCRIPT APPLICATION LOGIC -->
+    <!-- SCRIPT APPLICATION LOGIC WITH LOCALSTORAGE -->
     <script>
-        let currentUser = null;
-        let cart = [];
-        let salesChartInstance = null;
-
-        // Data Akun Pengguna Dinamis
-        let users = [
+        // Data awal default jika localStorage masih kosong
+        const defaultUsers = [
             { id: 1, username: 'admin', password: 'admin123', name: 'Administrator', role: 'admin' },
             { id: 2, username: 'rizky', password: 'password123', name: 'Mochamad Rizky Ramadhan', role: 'admin' },
             { id: 3, username: 'kasir1', password: 'kasirpass1', name: 'Siti Rahma', role: 'kasir' },
             { id: 4, username: 'kasir2', password: 'kasirpass2', name: 'Budi Santoso', role: 'kasir' }
         ];
 
-        let products = [
+        const defaultProducts = [
             { id: 1, code: 'BRG001', name: 'Indomie Goreng', category: 'Makanan', price: 3000, stock: 50 },
             { id: 2, code: 'BRG002', name: 'Aqua 600ml', category: 'Minuman', price: 4000, stock: 40 },
             { id: 3, code: 'BRG003', name: 'Chitato 68g', category: 'Camilan', price: 8000, stock: 30 },
@@ -509,11 +509,31 @@
             { id: 5, code: 'BRG005', name: 'Susu Ultra 250ml', category: 'Minuman', price: 6000, stock: 20 }
         ];
 
-        let transactions = [
+        const defaultTransactions = [
             { id: 'TRX0003', date: '2026-03-20 10:15', kasir: 'Mochamad Rizky Ramadhan', total: 150000, method: 'Tunai', items: [] },
             { id: 'TRX0002', date: '2026-03-20 10:05', kasir: 'Siti Rahma', total: 250000, method: 'E-Wallet', items: [] },
             { id: 'TRX0001', date: '2026-03-20 09:55', kasir: 'Mochamad Rizky Ramadhan', total: 75000, method: 'Tunai', items: [] }
         ];
+
+        // Inisialisasi State dari LocalStorage
+        let users = JSON.parse(localStorage.getItem('kantin_users')) || defaultUsers;
+        let products = JSON.parse(localStorage.getItem('kantin_products')) || defaultProducts;
+        let transactions = JSON.parse(localStorage.getItem('kantin_transactions')) || defaultTransactions;
+        let currentUser = JSON.parse(localStorage.getItem('kantin_current_user')) || null;
+        let cart = [];
+        let salesChartInstance = null;
+
+        // Helper fungsi menyimpan ke LocalStorage
+        function saveData() {
+            localStorage.setItem('kantin_users', JSON.stringify(users));
+            localStorage.setItem('kantin_products', JSON.stringify(products));
+            localStorage.setItem('kantin_transactions', JSON.stringify(transactions));
+            if (currentUser) {
+                localStorage.setItem('kantin_current_user', JSON.stringify(currentUser));
+            } else {
+                localStorage.removeItem('kantin_current_user');
+            }
+        }
 
         const formatRp = (num) => 'Rp ' + (Number(num) || 0).toLocaleString('id-ID');
 
@@ -521,6 +541,17 @@
             const clockEl = document.getElementById('clock');
             if (clockEl) clockEl.innerText = new Date().toLocaleString('id-ID');
         }, 1000);
+
+        // Auto Login jika sudah ada sesi tersimpan
+        window.addEventListener('DOMContentLoaded', () => {
+            saveData(); // Pastikan default data tersimpan di awal
+            if (currentUser) {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                setupUserUI();
+                switchTab('dashboard');
+            }
+        });
 
         // LOGIN HANDLER
         document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -538,6 +569,7 @@
                     name: inputNama || matchedUser.name,
                     role: matchedUser.role
                 };
+                saveData();
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
                 return;
@@ -566,11 +598,24 @@
 
         function logout() {
             currentUser = null;
+            saveData();
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('appContainer').classList.add('hidden');
             document.getElementById('loginNama').value = '';
             document.getElementById('loginUsername').value = '';
             document.getElementById('loginPassword').value = '';
+        }
+
+        function resetSystemData() {
+            if (confirm('Yakin ingin mereset semua data kembali ke default awal? Seluruh perubahan barang, akun, dan transaksi akan dihapus.')) {
+                localStorage.clear();
+                users = defaultUsers;
+                products = defaultProducts;
+                transactions = defaultTransactions;
+                saveData();
+                alert('Data berhasil di-reset!');
+                location.reload();
+            }
         }
 
         function switchTab(tabName) {
@@ -759,6 +804,7 @@
                 return;
             }
 
+            // Kurangi stok barang
             cart.forEach(cItem => {
                 const product = products.find(p => p.id === cItem.id);
                 if (product) product.stock -= cItem.qty;
@@ -778,6 +824,9 @@
             };
 
             transactions.unshift(newTx);
+
+            // Simpan perubahan ke LocalStorage
+            saveData();
 
             showReceipt(newTx, subtotal, discountPercent, payAmount, payAmount - total);
 
@@ -886,6 +935,7 @@
                 products.push({ id: Date.now(), code, name, category, price, stock });
             }
 
+            saveData();
             closeBarangModal();
             renderBarangTable();
         });
@@ -893,6 +943,7 @@
         function deleteBarang(id) {
             if (confirm('Yakin ingin menghapus barang ini?')) {
                 products = products.filter(p => p.id !== id);
+                saveData();
                 renderBarangTable();
             }
         }
@@ -925,6 +976,7 @@
             const p = products.find(item => item.id === id);
             if (p) {
                 p.stock += amount;
+                saveData();
                 renderStokTable();
             }
         }
@@ -1052,7 +1104,6 @@
             const password = document.getElementById('modalUserPassword').value.trim();
             const role = document.getElementById('modalUserRole').value;
 
-            // Validasi duplikasi username
             const isDuplicate = users.some(u => u.username === username && u.id != id);
             if (isDuplicate) {
                 alert('Username sudah digunakan oleh akun lain!');
@@ -1071,6 +1122,7 @@
                 users.push({ id: Date.now(), name, username, password, role });
             }
 
+            saveData();
             closeUserModal();
             renderUserTable();
         });
@@ -1083,6 +1135,7 @@
 
             if (confirm('Yakin ingin menghapus pengguna ini?')) {
                 users = users.filter(u => u.id !== id);
+                saveData();
                 renderUserTable();
             }
         }
